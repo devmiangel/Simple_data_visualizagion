@@ -75,3 +75,156 @@ ax.grid(True, linestyle='--', alpha=0.6)
 
 # Renderizar el gráfico en Streamlit
 st.pyplot(fig)
+
+
+# ============================================================
+# Módulo 2: Cifrado Emoji (Abecedario Emoji)
+# ============================================================
+import re
+
+st.divider()
+st.header("🔑 Cifrado Emoji — Tabla Decodificadora")
+
+# Tabla oficial Letra -> Emoji
+LETRA_A_EMOJI = {
+    "A": "☀️", "B": "🎈", "C": "🐱", "D": "🎲", "E": "🚀",
+    "F": "💥", "G": "🎸", "H": "🚁", "I": "🍦", "J": "🕹️",
+    "K": "🥋", "L": "🦁", "M": "🐵", "N": "🌊", "Ñ": "🍍",
+    "O": "🍕", "P": "🐼", "Q": "🧀", "R": "🤖", "S": "🔒",
+    "T": "🦖", "U": "🦄", "V": "🌋", "W": "🧇", "X": "⚔️",
+    "Y": "🪀", "Z": "⚡",
+}
+EMOJI_A_LETRA = {v: k for k, v in LETRA_A_EMOJI.items()}
+
+
+def codificar_emoji(texto: str) -> str:
+    """Texto plano -> emojis. Letras separadas por 1 espacio, palabras por 3 espacios."""
+    texto = texto.upper().strip()
+    palabras = re.split(r"\s+", texto)
+    palabras_cod = []
+    for pal in palabras:
+        emojis = [LETRA_A_EMOJI[l] for l in pal if l in LETRA_A_EMOJI]
+        # Conservar signos como ? ! . , al final sin codificar
+        signos = "".join(c for c in pal if c not in LETRA_A_EMOJI and not c.isalnum())
+        cod = " ".join(emojis)
+        if signos:
+            cod = (cod + " " + signos).strip()
+        if cod:
+            palabras_cod.append(cod)
+    return "   ".join(palabras_cod)
+
+
+def decodificar_emoji(cadena: str) -> str:
+    """Emojis -> texto plano. Soporta 2+ espacios como separador de palabra."""
+    if not cadena:
+        return ""
+    s = cadena.strip()
+    # Reemplazar cada emoji por su letra (ordenar por longitud desc por VS16: ☀️, 🕹️, ⚔️)
+    for emoji in sorted(EMOJI_A_LETRA, key=len, reverse=True):
+        s = s.replace(emoji, EMOJI_A_LETRA[emoji])
+    # Separadores alternativos: / | como corte de palabra
+    s = s.replace("/", "   ").replace("|", "   ")
+    # Cortar palabras por 2+ espacios, luego quitar espacios simples entre letras
+    palabras = re.split(r"\s{2,}", s.strip())
+    if len(palabras) == 1 and " " in s:
+        # Si el usuario usó 1 solo espacio también como separador de palabra,
+        # no podemos distinguirlo; se asume 1 espacio = separación de letra.
+        # Se devuelve sin colapsar palabras para inspección.
+        pass
+    limpias = [p.replace(" ", "") for p in palabras]
+    return " ".join(limpias)
+
+
+# 1. Tabla de equivalencia
+st.subheader("📖 Tabla de equivalencia Letra ↔ Emoji")
+df_tabla = pd.DataFrame(
+    [{"Letra": k, "Emoji": v} for k, v in LETRA_A_EMOJI.items()]
+)
+st.dataframe(df_tabla, use_container_width=True, hide_index=True)
+
+# 2. Validación del mensaje dado
+st.subheader("✉️ Validación del mensaje cifrado dado")
+MENSAJE_CIFRADO = "🐱 🦄 ☀️ 🌊 🦖 🍕 🔒   🐼 ☀️ 🧀 🚀 🦖 🚀 🔒   🤖 🚀 🐱 🍕 🎸 🍦 🔒 🦖 🚀   ☀️ 🪀 🚀 🤖   🔒 🍦 🐵 🍕 🌊 ?"
+ESPERADO_PALABRAS = ["CUANTOS", "PAQUETES", "RECOGISTE", "AYER", "SIMON"]
+
+st.code(MENSAJE_CIFRADO)
+palabras_cifradas = re.split(r"\s{3,}", MENSAJE_CIFRADO.strip())
+resultado_val = []
+for pc in palabras_cifradas:
+    # quitar el "?" suelto de la última palabra para comparar
+    pc_limpio = pc.replace("?", "").strip()
+    resultado_val.append(decodificar_emoji(pc_limpio))
+
+df_val = pd.DataFrame({
+    "Palabra cifrada": palabras_cifradas,
+    "Decodificado": resultado_val,
+    "Esperado": ESPERADO_PALABRAS,
+})
+# cálculo simple de check
+df_val["✔"] = ["✅" if d == e else "❌" for d, e in zip(resultado_val, ESPERADO_PALABRAS)]
+st.dataframe(df_val, use_container_width=True, hide_index=True)
+
+if resultado_val == ESPERADO_PALABRAS:
+    st.success(f"Mensaje válido: {' '.join(resultado_val)}")
+else:
+    st.warning(
+        f"Decodificado real: {' '.join(resultado_val)} — "
+        "no coincide 100% con lo esperado."
+    )
+    st.info(
+        "Detalle: palabra 2 decodifica como `PAQETES` (P-A-Q-E-T-E-S, 7 emojis), "
+        "falta la `U (🦄)`. Para `PAQUETES` debería ser: "
+        "🐼 ☀️ 🧀 🦄 🚀 🦖 🚀 🔒"
+    )
+
+st.subheader("🧪 Prueba la corrección sugerida")
+correccion = "🐼 ☀️ 🧀 🦄 🚀 🦖 🚀 🔒"
+st.code(correccion)
+st.write(f"Decodifica como: **{decodificar_emoji(correccion)}** (esperado: PAQUETES ✅)")
+
+# 3. Codificar: texto -> emoji
+st.subheader("⌨️ Codificar (texto → emoji)")
+texto_plano = st.text_input("Escribe texto (A-Z, Ñ, espacios)", value="PAQUETES")
+if texto_plano:
+    st.code(codificar_emoji(texto_plano))
+
+# 4. Decodificar: input por emoji (teclado emoji + botones)
+st.subheader("👆 Input por emoji (emoji → texto)")
+st.caption("Pega emojis abajo O construye el mensaje tocando los botones.")
+
+if "emoji_buffer" not in st.session_state:
+    st.session_state.emoji_buffer = ""
+
+# Botonera de emojis: 6 por fila
+letras = list(LETRA_A_EMOJI.keys())
+cols = st.columns(6)
+for i, letra in enumerate(letras):
+    emoji = LETRA_A_EMOJI[letra]
+    if cols[i % 6].button(f"{emoji}\n{letra}", key=f"btn_{letra}"):
+        sep = "" if st.session_state.emoji_buffer == "" or st.session_state.emoji_buffer.endswith("   ") else " "
+        st.session_state.emoji_buffer += sep + emoji
+        st.rerun()
+
+c1, c2, c3 = st.columns(3)
+if c1.button("➕ Espacio palabra"):
+    st.session_state.emoji_buffer += "   "
+    st.rerun()
+if c2.button("⌫ Borrar último"):
+    st.session_state.emoji_buffer = st.session_state.emoji_buffer.rstrip()[:-1].rstrip()
+    st.rerun()
+if c3.button("🗑️ Limpiar"):
+    st.session_state.emoji_buffer = ""
+    st.rerun()
+
+entrada_emoji = st.text_area(
+    "Entrada emoji (editable, también sirve pegar aquí):",
+    value=st.session_state.emoji_buffer,
+    height=100,
+)
+# sincronizar lo pegado con el buffer
+st.session_state.emoji_buffer = entrada_emoji
+
+if entrada_emoji.strip():
+    st.write(f"Decodificado: **{decodificar_emoji(entrada_emoji)}**")
+else:
+    st.caption("Toca emojis para empezar a cifrar/descifrar.")
