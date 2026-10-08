@@ -20,26 +20,43 @@ df_tabla = pd.DataFrame(
 )
 st.dataframe(df_tabla, use_container_width=True, hide_index=True)
 
-# 2. Frase con emojis a descifrar
-st.subheader("✉️ Mensaje a descifrar")
-MENSAJE_CIFRADO = "🐱 🦄 ☀️ 🌊 🦖 🍕 🔒   🐼 ☀️ 🧀 🦄 🚀 🦖 🚀 🔒   🤖 🚀 🐱 🍕 🎸 🍦 🔒 🦖 🚀   ☀️ 🪀 🚀 🤖   🔒 🍦 🐵 🍕 🌊 ?"
-st.markdown(
-    f"<div style='font-size:2rem; line-height:3rem; white-space:normal; word-wrap:break-word; overflow-wrap:anywhere;'>{MENSAJE_CIFRADO}</div>",
-    unsafe_allow_html=True,
-)
+# 2. Mensajes a descifrar (misma dinámica que el anterior)
+MENSAJES = [
+    {
+        "titulo": "Mensaje 1",
+        "cifrado": "🐱 🦄 ☀️ 🌊 🦖 🍕 🔒   🐼 ☀️ 🧀 🦄 🚀 🦖 🚀 🔒   🤖 🚀 🐱 🍕 🎸 🍦 🔒 🦖 🚀   ☀️ 🪀 🚀 🤖   🔒 🍦 🐵 🍕 🌊 ?",
+        "respuesta": "CUANTOS PAQUETES RECOGISTE AYER SIMON",
+    },
+    {
+        "titulo": "Mensaje 2 — Parte 1",
+        "cifrado": "🦖 🦄   🌊 🍕 🐵 🎈 🤖 🚀",
+        "respuesta": "TU NOMBRE",
+    },
+    {
+        "titulo": "Mensaje 3 — Parte 2",
+        "cifrado": "🦖 🦄   🎲 🚀 🐼 🍕 🤖 🦖 🚀   💥 ☀️ 🌋 🍕 🤖 🍦 🦖 🍕",
+        "respuesta": "TU DEPORTE FAVORITO",
+    },
+    {
+        "titulo": "Mensaje 4 — Parte 3",
+        "cifrado": "🐱 🦄 ☀️ 🦁   🚀 🔒   🦖 🦄   🐼 🚀 🦁 🍦 🐱 🦄 🦁 ☀️   💥 ☀️ 🌋 🍕 🤖 🍦 🦖 ☀️",
+        "respuesta": "CUAL ES TU PELICULA FAVORITA",
+    },
+]
 
-# 3. Input + submit con validación
-st.subheader("⌨️ Tu respuesta")
-RESPUESTA_CORRECTA = "CUANTOS PAQUETES RECOGISTE AYER SIMON"
-
-with st.form("form_descifrado", clear_on_submit=False):
-    respuesta = st.text_input("Establece el mensaje descifrado")
-    enviado = st.form_submit_button("Submit")
-
-if enviado:
-    normalizada = re.sub(r"\s+", " ", respuesta.upper().replace("¿", "").replace("?", "").replace(".", "").replace(",", "").strip())
-    if normalizada == RESPUESTA_CORRECTA:
-        st.balloons()
-        st.success("¡Encontraste el mensaje! 🎉")
-    else:
-        st.error("Mensaje incorrecto, inténtalo de nuevo.")
+for idx, m in enumerate(MENSAJES, start=1):
+    st.subheader(f"✉️ {m['titulo']}")
+    st.markdown(
+        f"<div style='font-size:2rem; line-height:3rem; white-space:normal; word-wrap:break-word; overflow-wrap:anywhere;'>{m['cifrado']}</div>",
+        unsafe_allow_html=True,
+    )
+    with st.form(f"form_descifrado_{idx}", clear_on_submit=False):
+        respuesta = st.text_input("Establece el mensaje descifrado", key=f"resp_{idx}")
+        enviado = st.form_submit_button("Submit")
+    if enviado:
+        normalizada = re.sub(r"\s+", " ", respuesta.upper().replace("¿", "").replace("?", "").replace(".", "").replace(",", "").strip())
+        if normalizada == m["respuesta"]:
+            st.balloons()
+            st.success("¡Encontraste el mensaje! 🎉")
+        else:
+            st.error("Mensaje incorrecto, inténtalo de nuevo.")
